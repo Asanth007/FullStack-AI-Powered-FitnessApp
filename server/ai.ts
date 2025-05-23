@@ -3,8 +3,8 @@ import { storage } from "./storage";
 import { chatRequestSchema } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Gemini API key
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyBHltdYWW_aJ7Rs5BfAQJ2Ni6ajf_0CnS4";
+// Gemini API key - using the provided key directly
+const GEMINI_API_KEY = "AIzaSyBHltdYWW_aJ7Rs5BfAQJ2Ni6ajf_0CnS4";
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -35,23 +35,46 @@ export const generateAiResponse = async (req: Request, res: Response) => {
       Provide a detailed, helpful response about fitness, nutrition, or exercise. If the question is not related to fitness, politely redirect to fitness topics.
     `;
     
-    // Call Gemini API
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
+    console.log("Sending request to Gemini API with key:", GEMINI_API_KEY.substring(0, 10) + "...");
     
-    // Save to chat history if user is authenticated
-    if (user) {
-      await storage.createChatHistory({
-        userId: user.id,
-        query: message,
-        response
+    // Call Gemini API with proper error handling
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const result = await model.generateContent(prompt);
+      
+      if (!result || !result.response) {
+        throw new Error("Empty response from Gemini API");
+      }
+      
+      const response = result.response.text();
+      
+      if (!response || response.trim() === "") {
+        throw new Error("Empty text response from Gemini API");
+      }
+      
+      // Save to chat history if user is authenticated
+      if (user) {
+        await storage.createChatHistory({
+          userId: user.id,
+          query: message,
+          response
+        });
+      }
+      
+      return res.status(200).json({ response });
+    } catch (apiError) {
+      console.error("Gemini API specific error:", apiError);
+      
+      // Provide a fallback response in case of API failure
+      const fallbackResponse = "I apologize, but I'm having trouble connecting to my knowledge base right now. Please try asking your fitness question again in a moment.";
+      
+      return res.status(200).json({ 
+        response: fallbackResponse,
+        apiError: true
       });
     }
-    
-    return res.status(200).json({ response });
   } catch (error) {
-    console.error("Gemini API error:", error);
+    console.error("General error in AI response generation:", error);
     return res.status(500).json({ 
       message: "Failed to generate response", 
       error: error instanceof Error ? error.message : "Unknown error"
