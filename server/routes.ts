@@ -11,6 +11,10 @@ import { getWorkoutVideos, getWorkoutVideo } from "./youtube";
 import { generateAiResponse, getChatHistory } from "./ai";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize workout videos in MongoDB
+  if ('seedWorkoutVideos' in storage) {
+    await (storage as any).seedWorkoutVideos();
+  }
   // Authentication routes
   app.post("/api/auth/login", login);
   app.post("/api/auth/register", register);
