@@ -230,4 +230,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { MongoStorage } from './mongo-storage';
+
+// Switch between in-memory storage and MongoDB storage
+const useMongoStorage = true;
+export const storage = useMongoStorage ? new MongoStorage() : new MemStorage();
