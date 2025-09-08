@@ -1,29 +1,34 @@
 import { IStorage } from './storage';
-import { 
-  User, 
-  InsertUser, 
-  WorkoutVideo, 
-  InsertWorkoutVideo, 
-  UserCalculation, 
+import {
+  User,
+  InsertUser,
+  WorkoutVideo,
+  InsertWorkoutVideo,
+  UserCalculation,
   InsertUserCalculation,
   ChatHistory,
   InsertChatHistory
 } from "@shared/schema";
-import { 
-  UserModel, 
-  WorkoutVideoModel, 
-  UserCalculationModel, 
-  ChatHistoryModel 
+import bcrypt from 'bcryptjs';
+import {
+  UserModel,
+  WorkoutVideoModel,
+  UserCalculationModel,
+  ChatHistoryModel
 } from './db';
 
+import { ObjectId } from 'mongodb';
+
 export class MongoStorage implements IStorage {
+  private normalizeId(id: string | ObjectId): ObjectId {
+    return typeof id === 'string' ? new ObjectId(id) : id;
+  }
+
   // User operations
-  async getUser(id: number): Promise<User | undefined> {
-    const user = await UserModel.findOne({ _id: id });
-    if (!user) return undefined;
-    
-    return {
-      id: Number(user._id),
+  async getUser(id: string | ObjectId): Promise<User | undefined> {
+    const user = await UserModel.findById(this.normalizeId(id));
+    return user && {
+      id: user._id.toString(),
       username: user.username,
       email: user.email,
       password: user.password,
@@ -33,11 +38,9 @@ export class MongoStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const user = await UserModel.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
-    if (!user) return undefined;
-    
-    return {
-      id: Number(user._id),
+    const user = await UserModel.findOne({ username: new RegExp(`^${username}$`, 'i') });
+    return user && {
+      id: user._id.toString(),
       username: user.username,
       email: user.email,
       password: user.password,
@@ -45,13 +48,11 @@ export class MongoStorage implements IStorage {
       createdAt: user.createdAt
     };
   }
-  
+
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const user = await UserModel.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } });
-    if (!user) return undefined;
-    
-    return {
-      id: Number(user._id),
+    const user = await UserModel.findOne({ email: new RegExp(`^${email}$`, 'i') });
+    return user && {
+      id: user._id.toString(),
       username: user.username,
       email: user.email,
       password: user.password,
@@ -62,9 +63,8 @@ export class MongoStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const newUser = await UserModel.create(insertUser);
-    
     return {
-      id: Number(newUser._id),
+      id: newUser._id.toString(),
       username: newUser.username,
       email: newUser.email,
       password: newUser.password,
@@ -72,13 +72,59 @@ export class MongoStorage implements IStorage {
       createdAt: newUser.createdAt
     };
   }
-  
-  // Video operations
+  // Save reset token
+async savePasswordResetToken(userId: string | ObjectId, token: string): Promise<void> {
+  await UserModel.updateOne(
+    { _id: this.normalizeId(userId) },
+    {
+      $set: {
+        resetToken: token,
+        resetTokenExpires: new Date(Date.now() + 3600000) // 1 hour expiry
+      }
+    }
+  );
+}
+
+// Find user by reset token
+async findUserByResetToken(token: string): Promise<User | undefined> {
+  const user = await UserModel.findOne({
+    resetToken: token,
+    resetTokenExpires: { $gt: new Date() } // Token still valid
+  });
+
+  return user && {
+    id: user._id.toString(),
+    username: user.username,
+    email: user.email,
+    password: user.password,
+    name: user.name || null,
+    createdAt: user.createdAt
+  };
+}
+
+// Update password
+async updateUserPassword(userId: string | ObjectId, newPassword: string): Promise<void> {
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await UserModel.updateOne(
+    { _id: this.normalizeId(userId) },
+    { $set: { password: hashed } }
+  );
+}
+
+// Clear reset token
+async clearResetToken(userId: string | ObjectId): Promise<void> {
+  await UserModel.updateOne(
+    { _id: this.normalizeId(userId) },
+    {
+      $unset: { resetToken: "", resetTokenExpires: "" }
+    }
+  );
+}
+  // Workout Video operations
   async getWorkoutVideos(): Promise<WorkoutVideo[]> {
     const videos = await WorkoutVideoModel.find();
-    
     return videos.map(video => ({
-      id: Number(video._id),
+      id: video._id.toString(),
       title: video.title,
       description: video.description || null,
       thumbnailUrl: video.thumbnailUrl || null,
@@ -87,16 +133,12 @@ export class MongoStorage implements IStorage {
       duration: video.duration || null
     }));
   }
-  
+
   async getWorkoutVideosByCategory(category: string): Promise<WorkoutVideo[]> {
-    if (category === "all") {
-      return this.getWorkoutVideos();
-    }
-    
-    const videos = await WorkoutVideoModel.find({ category });
-    
+    const query: Record<string, any> = category === 'all' ? {} : { category };
+    const videos = await WorkoutVideoModel.find(query);
     return videos.map(video => ({
-      id: Number(video._id),
+      id: video._id.toString(),
       title: video.title,
       description: video.description || null,
       thumbnailUrl: video.thumbnailUrl || null,
@@ -105,13 +147,11 @@ export class MongoStorage implements IStorage {
       duration: video.duration || null
     }));
   }
-  
-  async getWorkoutVideo(id: number): Promise<WorkoutVideo | undefined> {
-    const video = await WorkoutVideoModel.findOne({ _id: id });
-    if (!video) return undefined;
-    
-    return {
-      id: Number(video._id),
+
+  async getWorkoutVideo(id: string | ObjectId): Promise<WorkoutVideo | undefined> {
+    const video = await WorkoutVideoModel.findById(this.normalizeId(id));
+    return video && {
+      id: video._id.toString(),
       title: video.title,
       description: video.description || null,
       thumbnailUrl: video.thumbnailUrl || null,
@@ -120,12 +160,11 @@ export class MongoStorage implements IStorage {
       duration: video.duration || null
     };
   }
-  
+
   async createWorkoutVideo(insertVideo: InsertWorkoutVideo): Promise<WorkoutVideo> {
     const newVideo = await WorkoutVideoModel.create(insertVideo);
-    
     return {
-      id: Number(newVideo._id),
+      id: newVideo._id.toString(),
       title: newVideo.title,
       description: newVideo.description || null,
       thumbnailUrl: newVideo.thumbnailUrl || null,
@@ -134,69 +173,73 @@ export class MongoStorage implements IStorage {
       duration: newVideo.duration || null
     };
   }
-  
+
   // Calculation operations
-  async getUserCalculations(userId: number, type?: string): Promise<UserCalculation[]> {
-    const query: any = { userId };
-    if (type) {
-      query.type = type;
-    }
-    
+  async getUserCalculations(userId: string | ObjectId, type?: string): Promise<UserCalculation[]> {
+    const query: Record<string, any> = { userId: this.normalizeId(userId) };
+    if (type) query.type = type;
+
     const calculations = await UserCalculationModel.find(query).sort({ date: -1 });
-    
+
     return calculations.map(calc => ({
-      id: Number(calc._id),
-      userId: Number(calc.userId),
+      id: calc._id.toString(),
+      userId: calc.userId.toString(),
       type: calc.type,
       value: calc.value,
       date: calc.date,
       details: calc.details || null
     }));
   }
-  
+
   async createUserCalculation(insertCalculation: InsertUserCalculation): Promise<UserCalculation> {
-    const newCalculation = await UserCalculationModel.create(insertCalculation);
-    
+    const newCalc = await UserCalculationModel.create({
+      ...insertCalculation,
+      userId: this.normalizeId(insertCalculation.userId)
+    });
+
     return {
-      id: Number(newCalculation._id),
-      userId: Number(newCalculation.userId),
-      type: newCalculation.type,
-      value: newCalculation.value,
-      date: newCalculation.date,
-      details: newCalculation.details || null
+      id: newCalc._id.toString(),
+      userId: newCalc.userId.toString(),
+      type: newCalc.type,
+      value: newCalc.value,
+      date: newCalc.date,
+      details: newCalc.details || null
     };
   }
-  
+
   // Chat operations
-  async getChatHistory(userId: number): Promise<ChatHistory[]> {
-    const history = await ChatHistoryModel.find({ userId }).sort({ timestamp: -1 });
-    
+  async getChatHistory(userId: string | ObjectId): Promise<ChatHistory[]> {
+    const history = await ChatHistoryModel.find({ userId: this.normalizeId(userId) }).sort({ timestamp: -1 });
+
     return history.map(chat => ({
-      id: Number(chat._id),
-      userId: Number(chat.userId),
+      id: chat._id.toString(),
+      userId: chat.userId.toString(),
       query: chat.query,
       response: chat.response,
       timestamp: chat.timestamp
     }));
   }
-  
+
   async createChatHistory(insertChat: InsertChatHistory): Promise<ChatHistory> {
-    const newChat = await ChatHistoryModel.create(insertChat);
-    
+    const newChat = await ChatHistoryModel.create({
+      ...insertChat,
+      userId: this.normalizeId(insertChat.userId)
+    });
+
     return {
-      id: Number(newChat._id),
-      userId: Number(newChat.userId),
+      id: newChat._id.toString(),
+      userId: newChat.userId.toString(),
       query: newChat.query,
       response: newChat.response,
       timestamp: newChat.timestamp
     };
   }
 
-  // Initialize with seed data if needed
+  // Seeder
   async seedWorkoutVideos() {
     const count = await WorkoutVideoModel.countDocuments();
-    if (count > 0) return; // Don't seed if videos already exist
-    
+    if (count > 0) return;
+
     const initialVideos: InsertWorkoutVideo[] = [
       {
         title: "15-Minute Arm Workout for Beginners",
@@ -237,34 +280,10 @@ export class MongoStorage implements IStorage {
         videoId: "5PoEVZH8OP4",
         category: "fullbody",
         duration: "45:17"
-      },
-      {
-        title: "Dumbbell Arm Workout",
-        description: "Strengthen and tone your arms with this dumbbell-focused routine.",
-        thumbnailUrl: "https://images.unsplash.com/photo-1534258936925-c58bed479fcb",
-        videoId: "jPbB-M9b1xE",
-        category: "arms",
-        duration: "18:05"
-      },
-      {
-        title: "Bodyweight Leg Workout at Home",
-        description: "No equipment needed for this effective leg strengthening routine.",
-        thumbnailUrl: "https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a",
-        videoId: "kwkXyHjgoDM",
-        category: "legs",
-        duration: "25:40"
-      },
-      {
-        title: "Advanced Core Workout",
-        description: "Challenge your core with these advanced moves for a stronger midsection.",
-        thumbnailUrl: "https://images.unsplash.com/photo-1616803689943-5601631c7fec",
-        videoId: "DHD1-2P94DI",
-        category: "core",
-        duration: "15:20"
       }
     ];
-    
+
     await WorkoutVideoModel.insertMany(initialVideos);
-    console.log('Workout videos seeded successfully');
+    console.log("✅ Seeded workout videos.");
   }
 }

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/gymDB';
 
 // MongoDB connection
 export const connectToDatabase = async (): Promise<void> => {
@@ -19,7 +19,9 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   name: { type: String },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+   resetToken: { type: String, default: null },
+  resetTokenExpires: { type: Date, default: null }
 });
 
 const WorkoutVideoSchema = new mongoose.Schema({

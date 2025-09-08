@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Bot, Send, User } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface ChatMessage {
   type: "user" | "bot";
@@ -20,8 +21,9 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       type: "bot",
-      content: "Welcome to AI-Fit! I'm your AI fitness coach. You can ask me questions about workouts, nutrition, fitness goals, or anything related to your health journey."
-    }
+      content:
+        "Welcome to AI-Fit! I'm your AI fitness coach. You can ask me questions about workouts, nutrition, fitness goals, or anything related to your health journey.",
+    },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -31,28 +33,45 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
   // Fetch chat history if user is authenticated
   const { data: historyData } = useQuery({
     queryKey: ["/api/chat/history"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/chat/history");
+      return res.json();
+    },
     enabled: isAuthenticated,
   });
+  const hasLoadedHistory = useRef(false);
 
   useEffect(() => {
-    // If history is available, add it to messages
-    if (historyData?.history && historyData.history.length > 0) {
-      const historyMessages = historyData.history.slice(0, 5).map((item: any) => [
-        { type: "user", content: item.query },
-        { type: "bot", content: item.response }
-      ]).flat();
-      
-      setMessages([messages[0], ...historyMessages]);
+    if (
+      historyData?.history &&
+      historyData.history.length > 0 &&
+      !hasLoadedHistory.current
+    ) {
+      const historyMessages = historyData.history
+        .slice(0, 5)
+        .map((item: any) => [
+          { type: "user", content: item.query },
+          { type: "bot", content: item.response },
+        ])
+        .flat();
+
+      setMessages((prev) => [prev[0], ...historyMessages]);
+      hasLoadedHistory.current = true; // Prevent infinite loop
     }
   }, [historyData]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+    if (!isAuthenticated) {
+      setMessages([
+        {
+          type: "bot",
+          content:
+            "Welcome to AI-Fit! I'm your AI fitness coach. You can ask me questions about workouts, nutrition, fitness goals, or anything related to your health journey.",
+        },
+      ]);
+      hasLoadedHistory.current = false;
+    }
+  }, [isAuthenticated]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,26 +79,31 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
 
     // Add user message to chat
     const userMessage = { type: "user" as const, content: input };
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
 
     try {
       const token = localStorage.getItem("ai-fit-token");
       const headers: HeadersInit = {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       };
-      
+
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const response = await apiRequest("POST", "/api/chat", { message: input });
+      const response = await apiRequest("POST", "/api/chat", {
+        message: input,
+      });
       const data = await response.json();
 
       // Add bot response after a small delay to simulate typing
       setTimeout(() => {
-        setMessages(prev => [...prev, { type: "bot", content: data.response }]);
+        setMessages((prev) => [
+          ...prev,
+          { type: "bot", content: data.response },
+        ]);
         setIsTyping(false);
       }, 500);
     } catch (error) {
@@ -88,7 +112,7 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
       toast({
         title: "Error",
         description: "Failed to get a response from the AI coach",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -104,35 +128,45 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
           <p className="text-white/80 text-sm">Powered by Gemini AI</p>
         </div>
       </CardHeader>
-      
+
       <CardContent className="p-0">
         <div className="chat-container h-[500px] flex flex-col">
           {/* Chat Messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4" id="chat-messages">
+          <div
+            className="flex-1 p-4 overflow-y-auto space-y-4"
+            id="chat-messages"
+          >
             {messages.map((message, index) => (
-              <div key={index} className={`flex items-start ${message.type === 'user' ? 'justify-end' : ''}`}>
-                {message.type === 'bot' && (
+              <div
+                key={index}
+                className={`flex items-start ${
+                  message.type === "user" ? "justify-end" : ""
+                }`}
+              >
+                {message.type === "bot" && (
                   <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white flex-shrink-0 mr-3">
                     <Bot className="h-4 w-4" />
                   </div>
                 )}
-                
-                <div className={`rounded-lg p-3 chat-message ${
-                  message.type === 'user' 
-                    ? 'bg-primary text-white' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
-                }`}>
-                  <div className="whitespace-pre-line">{message.content}</div>
+
+                <div
+                  className={`rounded-lg p-3 chat-message prose prose-sm max-w-none ${
+                    message.type === "user"
+                      ? "bg-primary text-white"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  }`}
+                >
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>
-                
-                {message.type === 'user' && (
+
+                {message.type === "user" && (
                   <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white flex-shrink-0 ml-3">
                     <User className="h-4 w-4" />
                   </div>
                 )}
               </div>
             ))}
-            
+
             {isTyping && (
               <div className="flex items-start">
                 <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white flex-shrink-0 mr-3">
@@ -152,7 +186,7 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
             )}
             <div ref={messagesEndRef} />
           </div>
-          
+
           {/* Chat Input */}
           <div className="border-t p-4">
             <form onSubmit={handleSendMessage} className="flex">
@@ -164,8 +198,8 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
                 className="flex-1 rounded-r-none"
                 disabled={isTyping}
               />
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="rounded-l-none"
                 disabled={isTyping}
               >
@@ -173,7 +207,8 @@ export default function AiChat({ isAuthenticated }: AiChatProps) {
               </Button>
             </form>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              Powered by Gemini AI. Responses are AI-generated and may require verification with healthcare professionals.
+              Powered by Gemini AI. Responses are AI-generated and may require
+              verification with healthcare professionals.
             </p>
           </div>
         </div>

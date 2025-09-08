@@ -18,7 +18,7 @@ export default function Home({ isAuthenticated }: HomeProps) {
       <FeaturesOverview />
       
       {/* Calculators Section */}
-      <Element name="calculators">
+      {/* <Element name="calculators">
         <section id="calculators" className="py-16 bg-gray-50 dark:bg-gray-800">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold heading text-center text-gray-900 dark:text-gray-100 mb-4">Fitness Calculators</h2>
@@ -33,7 +33,7 @@ export default function Home({ isAuthenticated }: HomeProps) {
             </div>
           </div>
         </section>
-      </Element>
+      </Element> */}
       
       {/* Workout Videos Section */}
       <Element name="workouts">
@@ -50,7 +50,7 @@ export default function Home({ isAuthenticated }: HomeProps) {
       </Element>
       
       {/* AI Coach Section */}
-      <Element name="chat">
+      {/* <Element name="chat">
         <section id="chat" className="py-16 bg-gray-50 dark:bg-gray-800">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold heading text-center text-gray-900 dark:text-gray-100 mb-4">AI Fitness Coach</h2>
@@ -61,7 +61,7 @@ export default function Home({ isAuthenticated }: HomeProps) {
             <AiChat isAuthenticated={isAuthenticated} />
           </div>
         </section>
-      </Element>
+      </Element> */}
     </div>
   );
 }

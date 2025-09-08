@@ -1,6 +1,14 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  timestamp,
+} from "drizzle-orm/pg-core";
+
+// ---------- Table Definitions (for Zod Schemas only) ----------
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -24,10 +32,10 @@ export const workoutVideos = pgTable("workout_videos", {
 export const userCalculations = pgTable("user_calculations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
-  type: text("type").notNull(), // "bmi", "calories", "bodyfat"
+  type: text("type").notNull(), // e.g. "bmi", "calories", "bodyfat"
   value: text("value").notNull(),
   date: timestamp("date").defaultNow(),
-  details: text("details"), // JSON stringified additional data
+  details: text("details"), // JSON stringified
 });
 
 export const chatHistory = pgTable("chat_history", {
@@ -38,20 +46,29 @@ export const chatHistory = pgTable("chat_history", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
-// Insert Schemas
-export const insertUserSchema = createInsertSchema(users)
-  .omit({ id: true, createdAt: true });
+// ---------- Zod Insert Schemas ----------
 
-export const insertWorkoutVideoSchema = createInsertSchema(workoutVideos)
-  .omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
 
-export const insertUserCalculationSchema = createInsertSchema(userCalculations)
-  .omit({ id: true, date: true });
+export const insertWorkoutVideoSchema = createInsertSchema(workoutVideos).omit({
+  id: true,
+});
 
-export const insertChatHistorySchema = createInsertSchema(chatHistory)
-  .omit({ id: true, timestamp: true });
+export const insertUserCalculationSchema = createInsertSchema(userCalculations).omit({
+  id: true,
+  date: true,
+});
 
-// Auth Schemas
+export const insertChatHistorySchema = createInsertSchema(chatHistory).omit({
+  id: true,
+  timestamp: true,
+});
+
+// ---------- Auth Schemas ----------
+
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -59,49 +76,87 @@ export const loginSchema = z.object({
 
 export const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
+}).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords do not match",
   path: ["confirmPassword"],
 });
 
-// Calculator Schemas
+// ---------- Calculator Schemas ----------
+
 export const bmiCalculatorSchema = z.object({
-  height: z.number().min(50, "Height must be at least 50cm").max(300, "Height cannot exceed 300cm"),
-  weight: z.number().min(20, "Weight must be at least 20kg").max(500, "Weight cannot exceed 500kg"),
+  height: z.number().min(50).max(300),
+  weight: z.number().min(20).max(500),
 });
 
 export const calorieCalculatorSchema = z.object({
   gender: z.enum(["male", "female"]),
-  age: z.number().min(15, "Age must be at least 15").max(100, "Age cannot exceed 100"),
-  height: z.number().min(50, "Height must be at least 50cm").max(300, "Height cannot exceed 300cm"),
-  weight: z.number().min(20, "Weight must be at least 20kg").max(500, "Weight cannot exceed 500kg"),
+  age: z.number().min(15).max(100),
+  height: z.number().min(50).max(300),
+  weight: z.number().min(20).max(500),
   activityLevel: z.number().min(1.2).max(1.9),
   goal: z.enum(["lose", "maintain", "gain"]),
 });
 
 export const bodyFatCalculatorSchema = z.object({
   gender: z.enum(["male", "female"]),
-  age: z.number().min(15, "Age must be at least 15").max(100, "Age cannot exceed 100"),
-  height: z.number().min(50, "Height must be at least 50cm").max(300, "Height cannot exceed 300cm"),
-  weight: z.number().min(20, "Weight must be at least 20kg").max(500, "Weight cannot exceed 500kg"),
-  neck: z.number().min(20, "Neck must be at least 20cm").max(80, "Neck cannot exceed 80cm"),
-  waist: z.number().min(40, "Waist must be at least 40cm").max(200, "Waist cannot exceed 200cm"),
+  age: z.number().min(15).max(100),
+  height: z.number().min(50).max(300),
+  weight: z.number().min(20).max(500),
+  neck: z.number().min(20).max(80),
+  waist: z.number().min(40).max(200),
   hip: z.number().optional(),
 });
 
 export const chatRequestSchema = z.object({
-  message: z.string().min(1, "Message cannot be empty").max(500, "Message too long"),
+  message: z.string().min(1).max(500),
 });
 
-// Types
-export type User = typeof users.$inferSelect;
+// ---------- ✅ MongoDB-Compatible Types ----------
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  password: string;
+  name?: string | null;
+  createdAt: Date;
+}
+
+export interface WorkoutVideo {
+  id: string;
+  title: string;
+  description?: string | null;
+  thumbnailUrl?: string | null;
+  videoId: string;
+  category: string;
+  duration?: string | null;
+}
+
+export interface UserCalculation {
+  id: string;
+  userId: string;
+  type: string;
+  value: string;
+  date: Date;
+  details?: string | null;
+}
+
+export interface ChatHistory {
+  id: string;
+  userId: string;
+  query: string;
+  response: string;
+  timestamp: Date;
+}
+
+// ---------- Insert Types ----------
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type WorkoutVideo = typeof workoutVideos.$inferSelect;
 export type InsertWorkoutVideo = z.infer<typeof insertWorkoutVideoSchema>;
-export type UserCalculation = typeof userCalculations.$inferSelect;
 export type InsertUserCalculation = z.infer<typeof insertUserCalculationSchema>;
-export type ChatHistory = typeof chatHistory.$inferSelect;
 export type InsertChatHistory = z.infer<typeof insertChatHistorySchema>;
+
+// ---------- Form Data Types ----------
 
 export type LoginData = z.infer<typeof loginSchema>;
 export type RegisterData = z.infer<typeof registerSchema>;

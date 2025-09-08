@@ -46,9 +46,9 @@ export default function Header({ isAuthenticated, user, onLogin, onLogout }: Hea
   };
 
   const navItems = [
-    { href: "/#calculators", label: "Calculators" },
-    { href: "/#workouts", label: "Workouts" },
-    { href: "/#chat", label: "AI Coach" },
+    { href: "/calculators", label: "Calculators" },
+    { href: "/workouts", label: "Workouts" },
+    { href: "/chatbot", label: "AI Coach" },
     { href: "/profile", label: "Profile", authRequired: true },
   ];
 

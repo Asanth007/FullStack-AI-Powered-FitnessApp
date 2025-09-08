@@ -18,10 +18,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/login", login);
   app.post("/api/auth/register", register);
+  app.post("/api/auth/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+
+    const user = await storage.getUserByEmail(email);
+
+    // Always return success for security (don't reveal user existence)
+    if (!user) {
+      return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+    }
+
+    // Simulate sending a reset link (you can replace this with real email logic)
+    console.log(`🔐 Reset link would be sent to: ${email}`);
+
+    return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
   app.get("/api/auth/user", authenticate, getCurrentUser);
   
   // Calculator routes
-  app.post("/api/calculators/bmi", async (req, res) => {
+  app.post("/api/calculators/bmi", authenticate, async (req, res) => {
     try {
       const parseResult = bmiCalculatorSchema.safeParse(req.body);
       
@@ -73,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/calculators/calories", async (req, res) => {
+  app.post("/api/calculators/calories", authenticate, async (req, res) => {
     try {
       const parseResult = calorieCalculatorSchema.safeParse(req.body);
       
@@ -140,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/calculators/bodyfat", async (req, res) => {
+  app.post("/api/calculators/bodyfat", authenticate, async (req, res) => {
     try {
       const parseResult = bodyFatCalculatorSchema.safeParse(req.body);
       
@@ -211,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/videos/:id", getWorkoutVideo);
   
   // AI chatbot routes
-  app.post("/api/chat", generateAiResponse);
+  app.post("/api/chat", authenticate,generateAiResponse);
   app.get("/api/chat/history", authenticate, getChatHistory);
   
   // User calculation history (requires authentication)

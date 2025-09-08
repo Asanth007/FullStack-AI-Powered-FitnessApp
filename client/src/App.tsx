@@ -7,8 +7,12 @@ import Home from "@/pages/Home";
 import Profile from "@/pages/Profile";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import Workouts from "./pages/WorkoutPage";
+import Chatbot from "./pages/AiCoachPage";
 import { useState, useEffect } from "react";
-
+import ForgotPassword from "./components/auth/ForgotPassword";
+//import { Routes, Route } from "react-router-dom";
+import Calculators from "@/pages/Calculators";
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
@@ -70,6 +74,10 @@ function App() {
           <Route path="/profile" component={() => (
             isAuthenticated ? <Profile user={user} /> : <NotFound />
           )} />
+           <Route path="/calculators" component={Calculators} />
+           <Route path="/workouts" component={Workouts} />
+           <Route path="/chatbot" component={() => <Chatbot isAuthenticated={isAuthenticated} />}  />
+           <Route path="/forgot-password" component={ForgotPassword} />
           <Route component={NotFound} />
         </Switch>
       </main>

@@ -112,11 +112,11 @@ export default function Footer() {
           </div>
           
           <div>
-            <h4 className="text-lg font-medium mb-4">Stay Updated</h4>
+            <h4 className="text-lg font-medium mb-4">Contact US</h4>
             <p className="text-gray-400 mb-4">
-              Subscribe to our newsletter for the latest fitness tips and updates.
+              Through Our Phone Number
             </p>
-            <form onSubmit={handleSubscribe} className="flex">
+            {/* <form onSubmit={handleSubscribe} className="flex">
               <Input
                 type="email"
                 placeholder="Your email"
@@ -128,7 +128,8 @@ export default function Footer() {
               <Button type="submit" variant="secondary" className="rounded-l-none">
                 <Send className="h-4 w-4" />
               </Button>
-            </form>
+            </form> */}
+            <h4>+91 9740189139</h4>
           </div>
         </div>
         

@@ -17,16 +17,18 @@ export default function HeroSection() {
           <h1 className="text-4xl md:text-5xl font-bold heading mb-4">Transform Your Fitness Journey with AI</h1>
           <p className="text-lg md:text-xl mb-8">Track your progress, calculate your needs, and get personalized advice from our AI coach.</p>
           <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-            <ScrollLink to="calculators" smooth={true} duration={500} offset={-100}>
+            <ScrollLink to="workouts" smooth={true} duration={500} offset={-100}>
+              
               <Button variant="secondary" size="lg" className="px-6 py-6 h-auto text-base">
                 Get Started
               </Button>
+              
             </ScrollLink>
-            <ScrollLink to="calculators" smooth={true} duration={500} offset={-100}>
+            {/* <ScrollLink to="calculators" smooth={true} duration={500} offset={-100}>
               <Button variant="outline" size="lg" className="px-6 py-6 h-auto text-base bg-white text-primary hover:bg-gray-100">
                 Try Calculators
               </Button>
-            </ScrollLink>
+            </ScrollLink> */}
           </div>
         </div>
       </div>

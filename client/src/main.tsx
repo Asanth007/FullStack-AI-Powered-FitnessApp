@@ -8,7 +8,7 @@ import { ThemeProvider } from "./lib/theme-provider";
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="light" storageKey="ai-fit-theme">
-      <App />
+        <App />
     </ThemeProvider>
   </QueryClientProvider>
 );
