@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 dotenv.config();
-
+console.log("MONGODB_URI:", process.env.MONGODB_URI);
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
